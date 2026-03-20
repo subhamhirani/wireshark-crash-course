@@ -10,7 +10,6 @@
 
 **[▶ Open Interactive Tool](https://subhamhirani.github.io/wireshark-crash-course/wireshark_crash_course_interactive.html)**
 
-
 ## What's Inside
 
 | Feature | Details |
