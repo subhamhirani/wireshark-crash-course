@@ -1,0 +1,464 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans,sans-serif)}
+.ws{padding:1rem 0 2rem}
+.tabs{display:flex;gap:4px;margin-bottom:1.5rem;border-bottom:0.5px solid var(--color-border-tertiary);padding-bottom:0}
+.tab{padding:8px 16px;font-size:13px;color:var(--color-text-secondary);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s}
+.tab.active{color:var(--color-text-primary);border-bottom-color:var(--color-text-info);font-weight:500}
+.tab:hover:not(.active){color:var(--color-text-primary)}
+.panel{display:none}.panel.active{display:block}
+
+/* ── PANEL 1: Packet table ── */
+.pkt-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.filter-input{flex:1;min-width:160px;padding:6px 10px;font-size:12px;font-family:var(--font-mono,monospace);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:var(--color-background-secondary);color:var(--color-text-primary);outline:none}
+.filter-input:focus{border-color:var(--color-border-info)}
+.filter-input.err{border-color:var(--color-border-danger)}
+.btn-sm{padding:5px 12px;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn-sm:hover{background:var(--color-background-secondary);color:var(--color-text-primary)}
+.btn-primary{border-color:var(--color-border-info);color:var(--color-text-info)}
+.btn-primary:hover{background:var(--color-background-info)}
+.filter-hint{font-size:11px;color:var(--color-text-tertiary);width:100%;padding:0 2px}
+.filter-hint.err{color:var(--color-text-danger)}
+
+.pkt-table{width:100%;border-collapse:collapse;font-size:12px;font-family:var(--font-mono,monospace)}
+.pkt-table th{text-align:left;padding:6px 8px;font-size:10px;color:var(--color-text-tertiary);border-bottom:0.5px solid var(--color-border-tertiary);font-weight:500;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+.pkt-table td{padding:5px 8px;border-bottom:0.5px solid var(--color-border-tertiary);color:var(--color-text-secondary);white-space:nowrap;overflow:hidden;max-width:180px;text-overflow:ellipsis;cursor:pointer}
+.pkt-table tr:hover td{background:var(--color-background-secondary);color:var(--color-text-primary)}
+.pkt-table tr.selected td{background:var(--color-background-info);color:var(--color-text-info)}
+.proto-badge{display:inline-block;padding:1px 7px;border-radius:3px;font-size:10px;font-weight:500;font-family:var(--font-sans,sans-serif)}
+.pkt-detail{margin-top:12px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:14px 16px}
+.pkt-detail-title{font-size:12px;font-weight:500;color:var(--color-text-primary);margin-bottom:10px}
+.pkt-layer{margin-bottom:8px}
+.pkt-layer-hdr{font-size:11px;font-weight:500;color:var(--color-text-secondary);cursor:pointer;display:flex;align-items:center;gap:6px;padding:3px 0}
+.pkt-layer-hdr:hover{color:var(--color-text-primary)}
+.pkt-layer-body{padding:4px 0 4px 16px;font-size:11px;color:var(--color-text-secondary);font-family:var(--font-mono,monospace)}
+.pkt-layer-row{display:flex;gap:8px;padding:1px 0}
+.pkt-layer-key{min-width:140px;color:var(--color-text-tertiary)}
+.pkt-layer-val{color:var(--color-text-primary)}
+.hidden-layer{display:none}
+
+/* ── PANEL 2: Filters ── */
+.filter-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-bottom:20px}
+.filter-card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:14px 16px;cursor:pointer;transition:border-color .15s}
+.filter-card:hover{border-color:var(--color-border-secondary)}
+.filter-card:active{border-color:var(--color-border-info)}
+.fc-category{font-size:10px;color:var(--color-text-tertiary);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em}
+.fc-filter{font-size:13px;font-family:var(--font-mono,monospace);color:var(--color-text-info);margin-bottom:5px;font-weight:500}
+.fc-desc{font-size:12px;color:var(--color-text-secondary);line-height:1.5}
+.fc-hindi{font-size:11px;color:#BA7517;margin-top:5px;padding:4px 8px;background:#FAEEDA;border-radius:4px;border-left:2px solid #EF9F27}
+
+/* ── PANEL 3: Protocol decoder ── */
+.proto-selector{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.proto-btn{padding:5px 14px;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:999px;background:transparent;color:var(--color-text-secondary);cursor:pointer;transition:all .15s}
+.proto-btn:hover{border-color:var(--color-border-primary);color:var(--color-text-primary)}
+.proto-btn.active{background:var(--color-background-info);border-color:var(--color-border-info);color:var(--color-text-info)}
+.proto-detail{background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:16px}
+.proto-name{font-size:16px;font-weight:500;color:var(--color-text-primary);margin-bottom:4px}
+.proto-tagline{font-size:13px;color:var(--color-text-secondary);margin-bottom:14px}
+.proto-fields{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:14px}
+.proto-fields th{text-align:left;padding:5px 8px;font-size:10px;color:var(--color-text-tertiary);border-bottom:0.5px solid var(--color-border-tertiary);text-transform:uppercase;letter-spacing:.04em}
+.proto-fields td{padding:6px 8px;border-bottom:0.5px solid var(--color-border-tertiary);color:var(--color-text-secondary)}
+.proto-fields td:first-child{font-family:var(--font-mono,monospace);color:var(--color-text-primary);font-size:11px}
+.proto-ws{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:8px 12px;font-size:11px;font-family:var(--font-mono,monospace);color:var(--color-text-info);margin-bottom:10px}
+.proto-job{font-size:12px;color:var(--color-text-secondary);line-height:1.6;padding:8px 0;border-top:0.5px solid var(--color-border-tertiary)}
+
+/* ── PANEL 4: Quiz ── */
+.quiz-q{font-size:14px;font-weight:500;color:var(--color-text-primary);margin-bottom:14px;line-height:1.6}
+.quiz-opts{display:flex;flex-direction:column;gap:7px;margin-bottom:16px}
+.quiz-opt{padding:10px 14px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);font-size:13px;color:var(--color-text-secondary);cursor:pointer;transition:all .15s;text-align:left;background:transparent}
+.quiz-opt:hover:not(:disabled){border-color:var(--color-border-primary);color:var(--color-text-primary);background:var(--color-background-secondary)}
+.quiz-opt.correct{background:var(--color-background-success);border-color:var(--color-border-success);color:var(--color-text-success)}
+.quiz-opt.wrong{background:var(--color-background-danger);border-color:var(--color-border-danger);color:var(--color-text-danger)}
+.quiz-feedback{font-size:13px;line-height:1.6;padding:10px 14px;border-radius:var(--border-radius-md);margin-bottom:12px;display:none}
+.quiz-feedback.show{display:block}
+.quiz-feedback.correct{background:var(--color-background-success);color:var(--color-text-success)}
+.quiz-feedback.wrong{background:var(--color-background-danger);color:var(--color-text-danger)}
+.quiz-score{font-size:13px;color:var(--color-text-tertiary);margin-bottom:16px}
+</style>
+
+<div class="ws">
+<div class="tabs">
+  <button class="tab active" onclick="showTab('packets')">Live capture</button>
+  <button class="tab" onclick="showTab('filters')">Essential filters</button>
+  <button class="tab" onclick="showTab('protocols')">Protocol decoder</button>
+  <button class="tab" onclick="showTab('quiz')">Quick quiz</button>
+</div>
+
+<!-- ═══ TAB 1: Packet table ═══ -->
+<div class="panel active" id="tab-packets">
+  <div class="pkt-toolbar">
+    <input class="filter-input" id="filter-box" placeholder='Type a filter: dns · tcp · http · ip.src == 192.168.1.5 · tcp.port == 80' oninput="applyFilter()">
+    <button class="btn-sm btn-primary" onclick="applyFilter()">Apply</button>
+    <button class="btn-sm" onclick="clearFilter()">Clear</button>
+    <button class="btn-sm" onclick="addPackets()">+ More packets</button>
+  </div>
+  <div class="filter-hint" id="filter-hint">Tip: click any row to see full packet details below</div>
+  <div style="overflow-x:auto">
+  <table class="pkt-table">
+    <thead><tr>
+      <th style="width:36px">#</th>
+      <th style="width:56px">Time</th>
+      <th style="width:120px">Source</th>
+      <th style="width:120px">Destination</th>
+      <th style="width:70px">Protocol</th>
+      <th style="width:50px">Length</th>
+      <th>Info</th>
+    </tr></thead>
+    <tbody id="pkt-body"></tbody>
+  </table>
+  </div>
+  <div class="pkt-detail" id="pkt-detail" style="display:none"></div>
+</div>
+
+<!-- ═══ TAB 2: Filters ═══ -->
+<div class="panel" id="tab-filters">
+  <div style="font-size:13px;color:var(--color-text-secondary);margin-bottom:16px;line-height:1.6">
+    These 12 filters cover 90% of what you need as a junior network engineer or SOC analyst. Click any card to try it in the Live Capture tab.
+  </div>
+  <div class="filter-grid" id="filter-grid"></div>
+</div>
+
+<!-- ═══ TAB 3: Protocol decoder ═══ -->
+<div class="panel" id="tab-protocols">
+  <div class="proto-selector" id="proto-selector"></div>
+  <div class="proto-detail" id="proto-detail"></div>
+</div>
+
+<!-- ═══ TAB 4: Quiz ═══ -->
+<div class="panel" id="tab-quiz">
+  <div class="quiz-score" id="quiz-score">Score: 0 / 0</div>
+  <div class="quiz-q" id="quiz-q"></div>
+  <div class="quiz-opts" id="quiz-opts"></div>
+  <div class="quiz-feedback" id="quiz-fb"></div>
+  <button class="btn-sm btn-primary" id="quiz-next" onclick="nextQ()" style="display:none">Next question →</button>
+</div>
+</div>
+
+<script>
+/* ══ DATA ══ */
+const PACKETS=[
+  {no:1,time:'0.000',src:'192.168.1.5',dst:'8.8.8.8',proto:'DNS',len:74,info:'Standard query A google.com',color:'#185FA5',bg:'#E6F1FB',
+   layers:[
+    {name:'Ethernet II',fields:[['Dst MAC','00:1a:2b:3c:4d:5e'],['Src MAC','aa:bb:cc:dd:ee:ff'],['Type','0x0800 (IPv4)']]},
+    {name:'Internet Protocol v4',fields:[['Src IP','192.168.1.5'],['Dst IP','8.8.8.8'],['TTL','64'],['Protocol','17 (UDP)']]},
+    {name:'User Datagram Protocol',fields:[['Src Port','54321'],['Dst Port','53'],['Length','40']]},
+    {name:'Domain Name System (query)',fields:[['Transaction ID','0x1a2b'],['Flags','0x0100 (Standard query)'],['Questions','1'],['Query','google.com A']]},
+   ]},
+  {no:2,time:'0.012',src:'8.8.8.8',dst:'192.168.1.5',proto:'DNS',len:90,info:'Standard query response A 142.250.80.46',color:'#185FA5',bg:'#E6F1FB',
+   layers:[
+    {name:'Ethernet II',fields:[['Dst MAC','aa:bb:cc:dd:ee:ff'],['Src MAC','00:1a:2b:3c:4d:5e'],['Type','0x0800 (IPv4)']]},
+    {name:'Internet Protocol v4',fields:[['Src IP','8.8.8.8'],['Dst IP','192.168.1.5'],['TTL','117'],['Protocol','17 (UDP)']]},
+    {name:'User Datagram Protocol',fields:[['Src Port','53'],['Dst Port','54321'],['Length','56']]},
+    {name:'Domain Name System (response)',fields:[['Transaction ID','0x1a2b'],['Flags','0x8180 (Response, No error)'],['Answers','1'],['A record','142.250.80.46 TTL 299']]},
+   ]},
+  {no:3,time:'0.015',src:'192.168.1.5',dst:'142.250.80.46',proto:'TCP',len:66,info:'54322 → 80 [SYN] Seq=0 Win=64240',color:'#3B6D11',bg:'#EAF3DE',
+   layers:[
+    {name:'Ethernet II',fields:[['Dst MAC','00:1a:2b:3c:4d:5e'],['Src MAC','aa:bb:cc:dd:ee:ff'],['Type','0x0800 (IPv4)']]},
+    {name:'Internet Protocol v4',fields:[['Src IP','192.168.1.5'],['Dst IP','142.250.80.46'],['TTL','64'],['Protocol','6 (TCP)']]},
+    {name:'Transmission Control Protocol',fields:[['Src Port','54322'],['Dst Port','80'],['Seq','0 (relative)'],['Flags','SYN'],['Window size','64240']]},
+   ]},
+  {no:4,time:'0.028',src:'142.250.80.46',dst:'192.168.1.5',proto:'TCP',len:66,info:'80 → 54322 [SYN, ACK] Seq=0 Ack=1',color:'#3B6D11',bg:'#EAF3DE',
+   layers:[
+    {name:'Ethernet II',fields:[['Dst MAC','aa:bb:cc:dd:ee:ff'],['Src MAC','00:1a:2b:3c:4d:5e'],['Type','0x0800 (IPv4)']]},
+    {name:'Internet Protocol v4',fields:[['Src IP','142.250.80.46'],['Dst IP','192.168.1.5'],['TTL','118'],['Protocol','6 (TCP)']]},
+    {name:'Transmission Control Protocol',fields:[['Src Port','80'],['Dst Port','54322'],['Seq','0 (relative)'],['Ack','1'],['Flags','SYN, ACK'],['Window size','65535']]},
+   ]},
+  {no:5,time:'0.029',src:'192.168.1.5',dst:'142.250.80.46',proto:'TCP',len:54,info:'54322 → 80 [ACK] Seq=1 Ack=1',color:'#3B6D11',bg:'#EAF3DE',
+   layers:[
+    {name:'Ethernet II',fields:[['Dst MAC','00:1a:2b:3c:4d:5e'],['Src MAC','aa:bb:cc:dd:ee:ff'],['Type','0x0800 (IPv4)']]},
+    {name:'Internet Protocol v4',fields:[['Src IP','192.168.1.5'],['Dst IP','142.250.80.46'],['TTL','64'],['Protocol','6 (TCP)']]},
+    {name:'Transmission Control Protocol',fields:[['Src Port','54322'],['Dst Port','80'],['Seq','1'],['Ack','1'],['Flags','ACK']]},
+   ]},
+  {no:6,time:'0.030',src:'192.168.1.5',dst:'142.250.80.46',proto:'HTTP',len:422,info:'GET / HTTP/1.1 (application/json)',color:'#A32D2D',bg:'#FCEBEB',
+   layers:[
+    {name:'Ethernet II',fields:[['Dst MAC','00:1a:2b:3c:4d:5e'],['Src MAC','aa:bb:cc:dd:ee:ff'],['Type','0x0800 (IPv4)']]},
+    {name:'Internet Protocol v4',fields:[['Src IP','192.168.1.5'],['Dst IP','142.250.80.46'],['TTL','64'],['Protocol','6 (TCP)']]},
+    {name:'Transmission Control Protocol',fields:[['Src Port','54322'],['Dst Port','80'],['Flags','PSH, ACK']]},
+    {name:'Hypertext Transfer Protocol',fields:[['Method','GET'],['URI','/'],['Host','google.com'],['User-Agent','Mozilla/5.0'],['Accept','text/html'],['⚠ Unencrypted!','This is HTTP — visible to anyone on the network']]},
+   ]},
+  {no:7,time:'0.045',src:'142.250.80.46',dst:'192.168.1.5',proto:'HTTP',len:1460,info:'HTTP/1.1 200 OK (text/html)',color:'#A32D2D',bg:'#FCEBEB',
+   layers:[
+    {name:'Internet Protocol v4',fields:[['Src IP','142.250.80.46'],['Dst IP','192.168.1.5'],['TTL','118']]},
+    {name:'Hypertext Transfer Protocol',fields:[['Response','HTTP/1.1 200 OK'],['Content-Type','text/html; charset=UTF-8'],['Content-Length','1337']]},
+   ]},
+  {no:8,time:'0.051',src:'192.168.1.5',dst:'192.168.1.1',proto:'ARP',len:42,info:'Who has 192.168.1.1? Tell 192.168.1.5',color:'#854F0B',bg:'#FAEEDA',
+   layers:[
+    {name:'Ethernet II',fields:[['Dst MAC','ff:ff:ff:ff:ff:ff (Broadcast)'],['Src MAC','aa:bb:cc:dd:ee:ff'],['Type','0x0806 (ARP)']]},
+    {name:'Address Resolution Protocol',fields:[['Opcode','1 (request)'],['Sender IP','192.168.1.5'],['Sender MAC','aa:bb:cc:dd:ee:ff'],['Target IP','192.168.1.1'],['Target MAC','00:00:00:00:00:00 (unknown)']]},
+   ]},
+  {no:9,time:'0.052',src:'192.168.1.1',dst:'192.168.1.5',proto:'ARP',len:42,info:'192.168.1.1 is at 00:11:22:33:44:55',color:'#854F0B',bg:'#FAEEDA',
+   layers:[
+    {name:'Ethernet II',fields:[['Dst MAC','aa:bb:cc:dd:ee:ff'],['Src MAC','00:11:22:33:44:55'],['Type','0x0806 (ARP)']]},
+    {name:'Address Resolution Protocol',fields:[['Opcode','2 (reply)'],['Sender IP','192.168.1.1'],['Sender MAC','00:11:22:33:44:55 (your gateway)'],['Target IP','192.168.1.5']]},
+   ]},
+  {no:10,time:'0.100',src:'192.168.1.5',dst:'192.168.1.20',proto:'ICMP',len:74,info:'Echo (ping) request id=0x0001 seq=1',color:'#534AB7',bg:'#EEEDFE',
+   layers:[
+    {name:'Internet Protocol v4',fields:[['Src IP','192.168.1.5'],['Dst IP','192.168.1.20'],['TTL','64'],['Protocol','1 (ICMP)']]},
+    {name:'Internet Control Message Protocol',fields:[['Type','8 (Echo Request)'],['Code','0'],['Identifier','0x0001'],['Sequence','1'],['Data','32 bytes of padding']]},
+   ]},
+  {no:11,time:'0.101',src:'192.168.1.20',dst:'192.168.1.5',proto:'ICMP',len:74,info:'Echo (ping) reply id=0x0001 seq=1',color:'#534AB7',bg:'#EEEDFE',
+   layers:[
+    {name:'Internet Protocol v4',fields:[['Src IP','192.168.1.20'],['Dst IP','192.168.1.5'],['TTL','64']]},
+    {name:'Internet Control Message Protocol',fields:[['Type','0 (Echo Reply)'],['Code','0'],['Sequence','1'],['RTT','1 ms']]},
+   ]},
+  {no:12,time:'0.200',src:'192.168.1.5',dst:'192.168.1.30',proto:'TCP',len:66,info:'54350 → 22 [SYN] Seq=0 (SSH handshake)',color:'#3B6D11',bg:'#EAF3DE',
+   layers:[
+    {name:'Internet Protocol v4',fields:[['Src IP','192.168.1.5'],['Dst IP','192.168.1.30'],['Protocol','6 (TCP)']]},
+    {name:'Transmission Control Protocol',fields:[['Src Port','54350'],['Dst Port','22 (SSH)'],['Flags','SYN'],['Note','Encrypted after handshake — you cannot read SSH content in Wireshark']]},
+   ]},
+  {no:13,time:'0.350',src:'10.0.0.5',dst:'10.0.0.1',proto:'TCP',len:66,info:'45000 → 3389 [SYN] (RDP — suspicious!)',color:'#A32D2D',bg:'#FCEBEB',
+   layers:[
+    {name:'Internet Protocol v4',fields:[['Src IP','10.0.0.5'],['Dst IP','10.0.0.1'],['Protocol','6 (TCP)']]},
+    {name:'Transmission Control Protocol',fields:[['Src Port','45000'],['Dst Port','3389 (RDP!)'],['Flags','SYN'],['⚠ Note','Port 3389 = Remote Desktop. Unauthorised RDP = common attack vector. Investigate this host!']]},
+   ]},
+  {no:14,time:'0.400',src:'192.168.1.100',dst:'192.168.1.5',proto:'TCP',len:54,info:'1024 → 80 [SYN] Seq=0',color:'#3B6D11',bg:'#EAF3DE',
+   layers:[{name:'TCP',fields:[['Note','Part of a port scan — this IP is rapidly sending SYN packets to many ports on 192.168.1.5']]}]},
+  {no:15,time:'0.401',src:'192.168.1.100',dst:'192.168.1.5',proto:'TCP',len:54,info:'1025 → 443 [SYN] Seq=0',color:'#3B6D11',bg:'#EAF3DE',
+   layers:[{name:'TCP',fields:[['Src Port','1025'],['Dst Port','443 (HTTPS)'],['Flags','SYN']]}]},
+  {no:16,time:'0.402',src:'192.168.1.100',dst:'192.168.1.5',proto:'TCP',len:54,info:'1026 → 22 [SYN] Seq=0',color:'#3B6D11',bg:'#EAF3DE',
+   layers:[{name:'TCP',fields:[['Src Port','1026'],['Dst Port','22 (SSH)'],['Flags','SYN'],['⚠ Port scan','192.168.1.100 is scanning — filter: ip.src == 192.168.1.100 and tcp.flags.syn == 1']]},]},
+];
+
+const EXTRA_PACKETS=[
+  {no:17,time:'0.500',src:'192.168.1.5',dst:'8.8.8.8',proto:'DNS',len:72,info:'Standard query A github.com',color:'#185FA5',bg:'#E6F1FB',
+   layers:[{name:'DNS',fields:[['Query','github.com A'],['Type','A (IPv4 address)']]}]},
+  {no:18,time:'0.600',src:'192.168.1.5',dst:'142.250.80.46',proto:'TLS',len:583,info:'Client Hello (HTTPS — encrypted)',color:'#0F6E56',bg:'#E1F5EE',
+   layers:[{name:'TLS',fields:[['Handshake type','Client Hello'],['TLS version','TLS 1.3'],['SNI','google.com'],['Note','HTTPS is encrypted — you can see the domain (SNI) but not the content']]}]},
+  {no:19,time:'0.700',src:'192.168.1.5',dst:'255.255.255.255',proto:'DHCP',len:342,info:'DHCP Discover (broadcast)',color:'#854F0B',bg:'#FAEEDA',
+   layers:[{name:'DHCP',fields:[['Message type','Discover'],['Client MAC','aa:bb:cc:dd:ee:ff'],['Requested IP','0.0.0.0'],['Note','Broadcast — sent to all devices to find a DHCP server']]}]},
+  {no:20,time:'0.710',src:'192.168.1.1',dst:'192.168.1.5',proto:'DHCP',len:342,info:'DHCP Offer (192.168.1.5)',color:'#854F0B',bg:'#FAEEDA',
+   layers:[{name:'DHCP',fields:[['Message type','Offer'],['Offered IP','192.168.1.5'],['Subnet mask','255.255.255.0'],['Gateway','192.168.1.1'],['Lease time','86400 sec (24 hrs)']]}]},
+];
+
+const FILTERS=[
+  {cat:'Protocol',filter:'dns',desc:'Show only DNS traffic. Use to see every domain your computer is looking up.',hindi:'DNS filter se dekho ki computer kaunse domains lookup kar raha hai — malware bhi DNS use karta hai.'},
+  {cat:'Protocol',filter:'http',desc:'Unencrypted HTTP only. Any data here is readable by anyone on the network.',hindi:'HTTP traffic unencrypted hoti hai — passwords, form data sab visible. Always prefer HTTPS.'},
+  {cat:'Protocol',filter:'tcp',desc:'All TCP connections — web, SSH, email, databases, most services.',hindi:'TCP reliable connection hai — web (HTTP/HTTPS), SSH, email, database sab TCP use karte hain.'},
+  {cat:'Protocol',filter:'udp',desc:'UDP packets — DNS, DHCP, video streaming, VoIP, gaming.',hindi:'UDP fast but unreliable — DNS, DHCP, video calls, games. Delivery guaranteed nahi hai.'},
+  {cat:'Protocol',filter:'icmp',desc:'Ping traffic. ICMP type 8 = request, type 0 = reply.',hindi:'ICMP = ping. Type 8 request hai, type 0 reply. Network troubleshooting ke liye.'},
+  {cat:'Protocol',filter:'arp',desc:'Layer 2 resolution — who has this IP? ARP poisoning attacks appear here.',hindi:'ARP bata ta hai ki IP address kis MAC address ka hai. ARP spoofing attack yahan dikhega.'},
+  {cat:'IP address',filter:'ip.src == 192.168.1.5',desc:'Show only packets FROM this IP. Replace with any IP you are investigating.',hindi:'Ek specific IP se aane wale packets — suspect machine investigate karne ke liye.'},
+  {cat:'IP address',filter:'ip.addr == 192.168.1.5',desc:'All traffic TO or FROM this IP — both directions.',hindi:'Ek IP ka poora traffic — incoming aur outgoing dono.'},
+  {cat:'Port / TCP',filter:'tcp.port == 80',desc:'HTTP traffic on port 80. Change port number for any service you need.',hindi:'Port 80 = HTTP. Port badlo — 443 HTTPS, 22 SSH, 3389 RDP, 3306 MySQL.'},
+  {cat:'Port / TCP',filter:'tcp.flags.syn == 1 && tcp.flags.ack == 0',desc:'SYN-only packets. Port scans send SYN without completing the handshake.',hindi:'SYN only packets = port scan detect karta hai. Normal connection mein SYN ke baad SYN-ACK aata hai.'},
+  {cat:'Combine',filter:'ip.src == 192.168.1.100 && tcp.flags.syn == 1',desc:'All SYN packets from one specific host — classic port scan detection filter.',hindi:'Ek host ke sare SYN packets — agar bahut zyada aayen toh port scan ho raha hai.'},
+  {cat:'Combine',filter:'http || dns',desc:'HTTP and DNS together — catches both web browsing and domain lookups.',hindi:'HTTP aur DNS ek saath — web browsing activity poori capture karta hai.'},
+];
+
+const PROTOCOLS={
+  DNS:{name:'DNS — Domain Name System',tagline:'Translates human-readable domain names to IP addresses. Runs on UDP port 53.',ws:'dns',fields:[['Query name','The domain being looked up: google.com'],['Query type','A = IPv4, AAAA = IPv6, MX = mail, CNAME = alias'],['Response code','0 = NOERROR, 3 = NXDOMAIN (domain does not exist)'],['TTL','How long to cache the answer (seconds)']],job:'SOC use: malware uses DNS to contact C2 servers. High DNS query volume to unknown domains = suspicious. DNS tunnelling (data in DNS queries) also shows up here.'},
+  HTTP:{name:'HTTP — HyperText Transfer Protocol',tagline:'Unencrypted web traffic on port 80. Everything is readable — passwords, cookies, form data.',ws:'http',fields:[['Method','GET (fetch), POST (send data), PUT, DELETE'],['URI','The path being accessed: /login, /api/data'],['Status code','200 OK, 404 Not Found, 403 Forbidden, 301 Redirect'],['Headers','Host, Cookie, Authorization — all visible in plaintext!']],job:'SOC use: HTTP is dangerous because it is unencrypted. Look for POST requests — they may contain credentials. Any HTTP (not HTTPS) on a corporate network needs investigation.'},
+  TCP:{name:'TCP — Transmission Control Protocol',tagline:'Reliable, ordered connection-oriented transport. Establishes a 3-way handshake before data.',ws:'tcp',fields:[['SYN','Start connection (step 1 of handshake)'],['SYN-ACK','Server accepts (step 2)'],['ACK','Client confirms (step 3 — connection open)'],['FIN','Graceful close'],['RST','Abrupt reset — connection refused or dropped'],['Window size','How much data receiver can accept at once']],job:'SOC use: A burst of SYN packets without SYN-ACK responses = port scan (Nmap default). RST flood = DoS attack. Many half-open connections = SYN flood attack.'},
+  ICMP:{name:'ICMP — Internet Control Message Protocol',tagline:'Used by ping and traceroute. Type 8 = request, type 0 = reply.',ws:'icmp',fields:[['Type 8','Echo Request (you sent a ping)'],['Type 0','Echo Reply (host responded)'],['Type 3','Destination Unreachable (host/port not reachable)'],['Type 11','Time Exceeded (TTL expired — used by traceroute)'],['Identifier','Matches request with reply']],job:'SOC use: ICMP flood = ping of death / DDoS. ICMP tunnelling can hide data. If ping fails but TCP works — host may be blocking ICMP (firewall rule).'},
+  ARP:{name:'ARP — Address Resolution Protocol',tagline:'Maps IP addresses to MAC addresses at Layer 2. Broadcast-based, no authentication.',ws:'arp',fields:[['Opcode 1','Request: "Who has IP x.x.x.x? Tell me."'],['Opcode 2','Reply: "x.x.x.x is at MAC aa:bb:cc:dd"'],['Broadcast','FF:FF:FF:FF:FF:FF — sent to entire LAN'],['Gratuitous ARP','Device announces own IP/MAC — normal or attack']],job:'SOC use: ARP poisoning (spoofing) is a MITM attack. Attacker sends fake ARP replies claiming to be the gateway. In Wireshark: look for duplicate IP entries with different MACs — that is an ARP attack.'},
+  TLS:{name:'TLS — Transport Layer Security',tagline:'Encrypts HTTPS, SMTP, IMAP. You can see the handshake but not the content.',ws:'tls',fields:[['Client Hello','Supported TLS versions, cipher suites, random nonce'],['Server Hello','Chosen cipher, certificate'],['SNI','Server Name Indication — hostname is visible even in HTTPS!'],['Certificate','Server proves its identity — check the issuer'],['Application Data','Encrypted — you cannot read this in Wireshark']],job:'SOC use: TLS version matters — TLS 1.0/1.1 are deprecated and insecure. Check SNI for unexpected domains. Expired or self-signed certificates = suspicious. TLS to unusual ports = possible C2.'},
+  DHCP:{name:'DHCP — Dynamic Host Configuration Protocol',tagline:'Automatically assigns IP addresses. Uses UDP ports 67 (server) and 68 (client). The DORA process.',ws:'dhcp',fields:[['Discover','Client broadcasts: anyone have an IP for me?'],['Offer','Server replies with an available IP'],['Request','Client says: I want that IP'],['ACK','Server confirms: IP is yours, here is lease info'],['Lease time','How long the IP assignment is valid']],job:'SOC use: Rogue DHCP server attack — attacker runs a fake DHCP server to hand out a malicious gateway. If you see DHCP Offers from unexpected MAC addresses, it is a rogue DHCP server.'},
+};
+
+const QUIZ=[
+  {q:'You see packets: 192.168.1.5 → 8.8.8.8 on UDP port 53. What protocol is this?',opts:['HTTP','DNS','DHCP','ICMP'],ans:1,exp:'UDP port 53 = DNS. The destination 8.8.8.8 is Google\'s DNS server. DNS lookup karte waqt yahi dikhega.'},
+  {q:'A packet shows: TCP flags = SYN, from 10.0.0.50 → 192.168.1.5 port 22. Then SYN from same source to port 80. Then port 443. What is happening?',opts:['Normal web browsing','SSH connection','Port scan','DHCP request'],ans:2,exp:'Rapid SYN packets to multiple ports from one source = port scan. SYN ke baad ACK nahi aata — scan sirf check kar raha hai kaun si ports khuli hain. Filter: tcp.flags.syn==1 && tcp.flags.ack==0'},
+  {q:'You filter "http" and see a POST request to /login with data: username=admin&password=Pass123. What does this mean?',opts:['Encrypted login — normal','Unencrypted password — security risk','VPN traffic','DNS query'],ans:1,exp:'HTTP is unencrypted. Passwords in HTTP POST requests are visible to anyone on the same network. This is a serious security issue — the site should use HTTPS.'},
+  {q:'What Wireshark filter shows ALL traffic to AND from 192.168.1.10?',opts:['ip.src == 192.168.1.10','ip.dst == 192.168.1.10','ip.addr == 192.168.1.10','tcp.port == 192.168.1.10'],ans:2,exp:'ip.addr matches both source and destination. ip.src only matches outgoing, ip.dst only incoming. ip.addr = dono directions ek saath.'},
+  {q:'ICMP type 8 packets are going from your PC to a remote server. What are you doing?',opts:['Downloading a file','Sending a ping (echo request)','DNS lookup','ARP resolution'],ans:1,exp:'ICMP type 8 = Echo Request = ping. Type 0 = Echo Reply. Traceroute uses ICMP type 11 (Time Exceeded). Ping = network reachability test.'},
+  {q:'You see two ARP replies for the same IP (192.168.1.1) but with different MAC addresses. What attack is this?',opts:['DNS poisoning','ARP spoofing (MITM attack)','SYN flood','Port scan'],ans:1,exp:'Duplicate IP with different MACs = ARP spoofing. The attacker is claiming to be the gateway to intercept traffic. This is a Man-in-the-Middle attack. Wazuh SIEM can detect this automatically.'},
+  {q:'You can see the domain name "malware-c2.ru" in TLS traffic even though it is HTTPS. How?',opts:['TLS is broken','Server Name Indication (SNI) in TLS handshake','DNS response','HTTP header'],ans:1,exp:'SNI (Server Name Indication) is sent in plaintext during the TLS Client Hello so the server knows which certificate to use. Even HTTPS traffic reveals the destination domain — useful for threat intelligence.'},
+  {q:'What does this filter do: tcp.flags.syn==1 && tcp.flags.ack==0',opts:['Shows completed TCP connections','Shows only SYN packets — useful for detecting port scans','Shows UDP traffic','Shows ping requests'],ans:1,exp:'SYN flag set, ACK not set = initial connection request without a response. A burst of these from one source = Nmap port scan or SYN flood. Essential filter for any SOC analyst.'},
+];
+
+/* ══ STATE ══ */
+let allPackets=[...PACKETS];
+let visiblePackets=[...PACKETS];
+let selectedPkt=null;
+let qIdx=0,score=0,answered=false;
+
+/* ══ RENDER PACKETS ══ */
+function renderPkts(){
+  const tbody=document.getElementById('pkt-body');
+  tbody.innerHTML=visiblePackets.map(p=>`
+    <tr onclick="selectPkt(${p.no})" id="row-${p.no}" ${selectedPkt===p.no?'class="selected"':''}>
+      <td style="color:var(--color-text-tertiary)">${p.no}</td>
+      <td style="color:var(--color-text-tertiary)">${p.time}</td>
+      <td>${p.src}</td>
+      <td>${p.dst}</td>
+      <td><span class="proto-badge" style="background:${p.bg};color:${p.color}">${p.proto}</span></td>
+      <td style="color:var(--color-text-tertiary)">${p.len}</td>
+      <td style="color:var(--color-text-secondary);max-width:220px;overflow:hidden;text-overflow:ellipsis">${p.info}</td>
+    </tr>`).join('');
+}
+
+function selectPkt(no){
+  selectedPkt=no;
+  document.querySelectorAll('.pkt-table tr').forEach(r=>r.classList.remove('selected'));
+  const row=document.getElementById('row-'+no);
+  if(row)row.classList.add('selected');
+  const p=allPackets.find(x=>x.no===no);
+  if(!p)return;
+  const det=document.getElementById('pkt-detail');
+  det.style.display='block';
+  det.innerHTML=`<div class="pkt-detail-title">${p.proto} Packet #${p.no} — ${p.info}</div>`+
+    p.layers.map((l,i)=>`
+      <div class="pkt-layer">
+        <div class="pkt-layer-hdr" onclick="toggleLayer(${i})">
+          <span style="color:var(--color-text-tertiary);font-size:12px">${i===0?'▾':'▸'}</span>
+          <span style="font-size:11px;font-family:var(--font-mono,monospace)">${l.name}</span>
+        </div>
+        <div class="pkt-layer-body ${i===0?'':'hidden-layer'}" id="layer-${i}">
+          ${l.fields.map(f=>`<div class="pkt-layer-row"><span class="pkt-layer-key">${f[0]}:</span><span class="pkt-layer-val">${f[1]}</span></div>`).join('')}
+        </div>
+      </div>`).join('');
+}
+
+function toggleLayer(i){
+  const body=document.getElementById('layer-'+i);
+  const isHidden=body.classList.contains('hidden-layer');
+  body.classList.toggle('hidden-layer',!isHidden);
+  const hdrs=document.querySelectorAll('.pkt-layer-hdr span');
+  if(hdrs[i*2])hdrs[i*2].textContent=isHidden?'▾':'▸';
+}
+
+/* ══ FILTER ══ */
+const FILTER_MAP={
+  dns:p=>p.proto==='DNS',
+  http:p=>p.proto==='HTTP',
+  tcp:p=>p.proto==='TCP'||p.proto==='TLS',
+  udp:p=>p.proto==='DNS'||p.proto==='DHCP',
+  icmp:p=>p.proto==='ICMP',
+  arp:p=>p.proto==='ARP',
+  tls:p=>p.proto==='TLS',
+  dhcp:p=>p.proto==='DHCP',
+};
+
+function applyFilter(){
+  const raw=document.getElementById('filter-box').value.trim().toLowerCase();
+  const hint=document.getElementById('filter-hint');
+  document.getElementById('filter-box').classList.remove('err');
+  hint.classList.remove('err');
+  if(!raw){visiblePackets=[...allPackets];renderPkts();hint.textContent='Tip: click any row to see full packet details below';return;}
+  let fn=null;
+  if(FILTER_MAP[raw]){fn=FILTER_MAP[raw];}
+  else if(raw.includes('ip.src ==')){const ip=raw.split('==')[1].trim();fn=p=>p.src===ip;}
+  else if(raw.includes('ip.dst ==')){const ip=raw.split('==')[1].trim();fn=p=>p.dst===ip;}
+  else if(raw.includes('ip.addr ==')){const ip=raw.split('==')[1].trim();fn=p=>p.src===ip||p.dst===ip;}
+  else if(raw.includes('tcp.port ==')){const port=raw.split('==')[1].trim();fn=p=>(p.proto==='TCP'||p.proto==='HTTP'||p.proto==='TLS')&&(p.info.includes('→ '+port)||p.info.includes(port+' →'));}
+  else if(raw==='tcp.flags.syn == 1 && tcp.flags.ack == 0'||raw==='tcp.flags.syn==1 && tcp.flags.ack==0'){fn=p=>p.info.includes('[SYN]')&&!p.info.includes('ACK');}
+  else if(raw==='http || dns'){fn=p=>p.proto==='HTTP'||p.proto==='DNS';}
+  else if(raw.includes('ip.src ==')&&raw.includes('tcp.flags.syn')){const ip=raw.match(/ip\.src\s*==\s*([\d.]+)/)?.[1];fn=p=>p.src===ip&&p.info.includes('[SYN]');}
+  else{document.getElementById('filter-box').classList.add('err');hint.textContent='Unknown filter — try: dns · tcp · http · icmp · arp · ip.addr == x.x.x.x · tcp.flags.syn==1 && tcp.flags.ack==0';hint.classList.add('err');return;}
+  visiblePackets=allPackets.filter(fn);
+  const count=visiblePackets.length;
+  hint.textContent=count+' packet'+(count!==1?'s':'')+' match filter: "'+raw+'"';
+  hint.classList.remove('err');
+  renderPkts();
+}
+
+function clearFilter(){
+  document.getElementById('filter-box').value='';
+  document.getElementById('filter-box').classList.remove('err');
+  visiblePackets=[...allPackets];
+  renderPkts();
+  document.getElementById('filter-hint').textContent='Tip: click any row to see full packet details below';
+  document.getElementById('filter-hint').classList.remove('err');
+}
+
+function addPackets(){
+  if(allPackets.length<20){
+    allPackets=[...allPackets,...EXTRA_PACKETS];
+    applyFilter();
+  }
+}
+
+/* ══ FILTER CARDS ══ */
+function renderFilterCards(){
+  document.getElementById('filter-grid').innerHTML=FILTERS.map(f=>`
+    <div class="filter-card" onclick="useFilter('${f.filter}')">
+      <div class="fc-category">${f.cat}</div>
+      <div class="fc-filter">${f.filter}</div>
+      <div class="fc-desc">${f.desc}</div>
+      <div class="fc-hindi">🇮🇳 ${f.hindi}</div>
+    </div>`).join('');
+}
+
+function useFilter(f){
+  document.getElementById('filter-box').value=f;
+  showTab('packets');
+  setTimeout(applyFilter,50);
+}
+
+/* ══ PROTOCOL DECODER ══ */
+function renderProtos(){
+  const keys=Object.keys(PROTOCOLS);
+  document.getElementById('proto-selector').innerHTML=keys.map(k=>`
+    <button class="proto-btn ${k===keys[0]?'active':''}" onclick="showProto('${k}')">${k}</button>`).join('');
+  showProto(keys[0]);
+}
+
+function showProto(key){
+  document.querySelectorAll('.proto-btn').forEach(b=>b.classList.toggle('active',b.textContent===key));
+  const p=PROTOCOLS[key];
+  document.getElementById('proto-detail').innerHTML=`
+    <div class="proto-name">${p.name}</div>
+    <div class="proto-tagline">${p.tagline}</div>
+    <div style="margin-bottom:10px;font-size:11px;color:var(--color-text-tertiary)">Wireshark filter:</div>
+    <div class="proto-ws">${p.ws}</div>
+    <table class="proto-fields">
+      <tr><th>Field</th><th>What it means</th></tr>
+      ${p.fields.map(f=>`<tr><td>${f[0]}</td><td>${f[1]}</td></tr>`).join('')}
+    </table>
+    <div class="proto-job"><strong style="color:var(--color-text-primary)">SOC / Network job relevance:</strong> ${p.job}</div>`;
+}
+
+/* ══ QUIZ ══ */
+function renderQ(){
+  const q=QUIZ[qIdx];
+  document.getElementById('quiz-score').textContent='Score: '+score+' / '+qIdx+(qIdx>0?' correct':'');
+  document.getElementById('quiz-q').textContent='Q'+(qIdx+1)+': '+q.q;
+  document.getElementById('quiz-opts').innerHTML=q.opts.map((o,i)=>`
+    <button class="quiz-opt" id="opt-${i}" onclick="answerQ(${i})">${o}</button>`).join('');
+  document.getElementById('quiz-fb').className='quiz-feedback';
+  document.getElementById('quiz-fb').textContent='';
+  document.getElementById('quiz-next').style.display='none';
+  answered=false;
+}
+
+function answerQ(i){
+  if(answered)return;
+  answered=true;
+  const q=QUIZ[qIdx];
+  const fb=document.getElementById('quiz-fb');
+  const correct=i===q.ans;
+  if(correct)score++;
+  document.querySelectorAll('.quiz-opt').forEach((b,j)=>{
+    b.disabled=true;
+    if(j===q.ans)b.classList.add('correct');
+    else if(j===i&&!correct)b.classList.add('wrong');
+  });
+  fb.textContent=(correct?'✓ Correct! ':'✗ Wrong. ')+q.exp;
+  fb.className='quiz-feedback show '+(correct?'correct':'wrong');
+  document.getElementById('quiz-next').style.display='inline-block';
+  document.getElementById('quiz-score').textContent='Score: '+score+' / '+(qIdx+1);
+}
+
+function nextQ(){
+  qIdx=(qIdx+1)%QUIZ.length;
+  if(qIdx===0)score=0;
+  renderQ();
+}
+
+/* ══ TABS ══ */
+function showTab(id){
+  document.querySelectorAll('.tab').forEach((t,i)=>{
+    const ids=['packets','filters','protocols','quiz'];
+    t.classList.toggle('active',ids[i]===id);
+  });
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+}
+
+/* ══ INIT ══ */
+renderPkts();
+renderFilterCards();
+renderProtos();
+renderQ();
+</script>
