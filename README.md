@@ -5,13 +5,11 @@
 [![Live Demo](https://img.shields.io/badge/Demo-GitHub%20Pages-green)](https://YOUR-USERNAME.github.io/wireshark-crash-course/wireshark_crash_course_interactive.html)
 
 > An interactive Wireshark learning tool for network engineers and SOC analysts.
-> Built as part of a 30-day networking career development program (TOPS Technologies curriculum).
 
 ## Live Demo
 
 **[▶ Open Interactive Tool](https://subhamhirani.github.io/wireshark-crash-course/wireshark_crash_course_interactive.html)**
 
-*(Replace YOUR-USERNAME with your GitHub username)*
 
 ## What's Inside
 
